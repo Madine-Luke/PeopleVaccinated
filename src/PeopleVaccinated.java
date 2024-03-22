@@ -10,7 +10,6 @@ import org.apache.hadoop.util.GenericOptionsParser;
 
 import java.io.IOException;
 import java.util.Scanner;
-import java.util.StringTokenizer;
 
 public class PeopleVaccinated {
     public static class PeopleVaccinatedMapper extends Mapper<Object, Text, Text, Text> {
@@ -45,12 +44,16 @@ public class PeopleVaccinated {
     }
 
     public static class PeopleVaccinatedReducer extends Reducer<Text, Text, Text, Text> {
+        int maxSino = 0;
+        String maxSinoAG = "";
+        int maxBio = 0;
+        String maxBioAG = "";
+        String out = "";
         public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
             String ageGroup = key.toString();
             int[] doses = new int[12];
             int sinoPeople = 0;
             int bioPeople = 0;
-            String out = "";
             for (Text val : values) {
                 String[] data = val.toString().split(",");
                 for (int i = 1; i < data.length; i++) {
@@ -64,11 +67,20 @@ public class PeopleVaccinated {
                     bioPeople += doses[i];
                 }
             }
-            out = "," + sinoPeople + "," + bioPeople;
-            String kvString = ageGroup + out;
-            if (ageGroup.compareTo("") != 0) {
-                context.write(new Text(kvString), new Text());
+            if (sinoPeople > maxSino) {
+                maxSino = sinoPeople;
+                maxSinoAG = ageGroup;
             }
+            if (bioPeople > maxBio) {
+                maxBio = bioPeople;
+                maxBioAG = ageGroup;
+            }
+            out = "Age Group: " + maxSinoAG + ", Vaccines: " + maxSino + "," + "Age Group: " + maxBioAG + ", Vaccines: " + maxBio;
+        }
+
+        @Override
+        protected void cleanup(Context context) throws IOException, InterruptedException {
+            context.write(new Text(out), new Text());
         }
     }
 
